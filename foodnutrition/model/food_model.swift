@@ -1,11 +1,9 @@
 import Foundation
 
-// MARK: - FoodResponse
 struct FoodResponse: Codable {
     let foods: [Food]
 }
 
-// MARK: - Food
 struct Food: Codable, Identifiable {
     let id: Int
     let description: String
@@ -20,7 +18,6 @@ struct Food: Codable, Identifiable {
     }
 }
 
-// MARK: - Nutrient
 struct Nutrient: Codable {
     let nutrientName: String
     let value: Double

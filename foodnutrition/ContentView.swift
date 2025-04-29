@@ -2,49 +2,108 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = FoodViewModel()
+    @State private var showResultSheet = false
+    @State private var query = ""
 
     var body: some View {
         NavigationView {
-            VStack {
-                TextField("Enter food name", text: Binding(
-                    get: { viewModel.food?.description ?? "" },
-                    set: { viewModel.fetchFood(with: $0) }
-                ))
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-                .background(Color.white.opacity(0.8)) // Add a background color for contrast
-                .cornerRadius(10)
-                .padding(.horizontal)
+            ZStack {
+                LinearGradient(colors: [.orange.opacity(0.2), .white], startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
 
-                Button(action: {
-                    viewModel.fetchFood(with: viewModel.food?.description ?? "")
-                }) {
-                    Text("Search")
-                        .fontWeight(.bold)
+                VStack(spacing: 16) {
+                    // 🔍 Search Field
+                    TextField("Search food e.g. Oatmeal", text: $query)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
                         .padding()
-                        .background(Color.blue)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 4)
+                        .padding(.horizontal)
+
+                    Button(action: {
+                        viewModel.fetchFood(with: query)
+                        showResultSheet = true
+                    }) {
+                        HStack {
+                            Spacer()
+                            if viewModel.isLoading {
+                                ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Text("Search")
+                                    .fontWeight(.bold)
+                            }
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.orange)
                         .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                .padding()
-
-                if let food = viewModel.food {
-                    ScrollView { // Added ScrollView for better responsiveness
-                        FoodDetailView(food: food)
-                            .padding()
+                        .cornerRadius(12)
+                        .padding(.horizontal)
                     }
-                } else if let errorMessage = viewModel.errorMessage {
-                    Text("Error: \(errorMessage)")
-                        .foregroundColor(.red)
-                        .padding()
-                } else {
-                    Text("Enter a food name and tap 'Search' to find details.")
-                        .padding()
+
+                    // 🔁 Recent Searches
+                    if !viewModel.recentSearches.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Recent Searches")
+                                .font(.headline)
+                                .padding(.horizontal)
+
+                            ForEach(viewModel.recentSearches, id: \.self) { term in
+                                HStack {
+                                    Text(term)
+                                        .onTapGesture {
+                                            query = term
+                                            viewModel.fetchFood(with: term)
+                                            showResultSheet = true
+                                        }
+
+                                    Spacer()
+
+                                    Button(action: {
+                                        viewModel.deleteSearch(term)
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                .padding()
+                                .background(Color.white.opacity(0.9))
+                                .cornerRadius(10)
+                                .shadow(radius: 1)
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                // ✅ Result Sheet
+                if let food = viewModel.food, showResultSheet {
+                    FoodResultSheet(food: food) {
+                        showResultSheet = false
+                    }
+                    .transition(.move(edge: .bottom))
+                    .animation(.easeInOut, value: showResultSheet)
+                }
+
+                // ⚠️ Error
+                if let error = viewModel.errorMessage, showResultSheet {
+                    VStack {
+                        Text("⚠️ \(error)")
+                            .foregroundColor(.red)
+                        Button("Dismiss") {
+                            showResultSheet = false
+                        }
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .shadow(radius: 6)
                 }
             }
-            .navigationTitle("Food Details")
+            .navigationTitle("Nutrition Lookup")
         }
-        .background(Color(.systemGray6)) // Set background color for the entire view
-        .edgesIgnoringSafeArea(.all) // Allow the background to fill the screen
     }
 }
